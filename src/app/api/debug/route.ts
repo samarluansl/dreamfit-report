@@ -12,10 +12,19 @@ export async function GET() {
     const username = process.env.SYLTEK_USERNAME || '';
     const password = process.env.SYLTEK_PASSWORD || '';
     const body = new URLSearchParams({ userName: username, password });
+    const bodyStr = body.toString();
     const res = await fetch('https://dreamfitalcorcon.syltek.com/system/account/login', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-      body: body.toString(),
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
+        'Content-Length': String(Buffer.byteLength(bodyStr)),
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36',
+        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+        'Accept-Language': 'es-ES,es;q=0.9',
+        'Origin': 'https://dreamfitalcorcon.syltek.com',
+        'Referer': 'https://dreamfitalcorcon.syltek.com/system/account/login',
+      },
+      body: bodyStr,
       redirect: 'manual',
     });
 
