@@ -12,6 +12,7 @@ import {
   ResponsiveContainer,
 } from 'recharts';
 import type { MonthlyStats } from '@/lib/mysql';
+import ChartWrapper from './ChartWrapper';
 
 interface MatchesChartProps {
   data: MonthlyStats[];
@@ -69,8 +70,8 @@ export default function MatchesChart({ data }: MatchesChartProps) {
   }));
 
   return (
-    <div className="w-full h-80" style={{ minWidth: 0 }}>
-      <ResponsiveContainer width="100%" height="100%" minHeight={1} minWidth={1}>
+    <ChartWrapper className="h-80">
+      <ResponsiveContainer width="100%" height="100%">
         <ComposedChart
           data={chartData}
           margin={{ top: 8, right: 16, left: 0, bottom: 4 }}
@@ -111,6 +112,6 @@ export default function MatchesChart({ data }: MatchesChartProps) {
           />
         </ComposedChart>
       </ResponsiveContainer>
-    </div>
+    </ChartWrapper>
   );
 }

@@ -11,6 +11,7 @@ import {
   ResponsiveContainer,
   LabelList,
 } from 'recharts';
+import ChartWrapper from './ChartWrapper';
 
 interface PupilsChartProps {
   data: Array<{
@@ -30,8 +31,8 @@ export default function PupilsChart({ data }: PupilsChartProps) {
   }
 
   return (
-    <div style={{ minWidth: 0 }} className="h-64">
-      <ResponsiveContainer width="100%" height="100%" minHeight={1} minWidth={1}>
+    <ChartWrapper className="h-64">
+      <ResponsiveContainer width="100%" height="100%">
         <BarChart
           data={data}
           margin={{ top: 20, right: 16, left: 0, bottom: 4 }}
@@ -85,6 +86,6 @@ export default function PupilsChart({ data }: PupilsChartProps) {
           </Bar>
         </BarChart>
       </ResponsiveContainer>
-    </div>
+    </ChartWrapper>
   );
 }

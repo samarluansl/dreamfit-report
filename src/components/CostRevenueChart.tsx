@@ -10,6 +10,7 @@ import {
   Legend,
   ResponsiveContainer,
 } from 'recharts';
+import ChartWrapper from './ChartWrapper';
 
 interface CostRevenueChartProps {
   revenue: number;
@@ -105,8 +106,8 @@ export default function CostRevenueChart({
       </div>
 
       {/* Grouped bar chart */}
-      <div className="w-full h-48" style={{ minWidth: 0 }}>
-        <ResponsiveContainer width="100%" height="100%" minHeight={1} minWidth={1}>
+      <ChartWrapper className="h-48">
+        <ResponsiveContainer width="100%" height="100%">
           <BarChart
             data={chartData}
             layout="vertical"
@@ -149,7 +150,7 @@ export default function CostRevenueChart({
             />
           </BarChart>
         </ResponsiveContainer>
-      </div>
+      </ChartWrapper>
 
       {/* Invoice download */}
       {invoicePdfUrl && (

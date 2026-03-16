@@ -99,12 +99,12 @@ export default function MonthSelector({
       {/* Navigate button */}
       <button
         onClick={handleNavigate}
-        className="h-8 px-3 text-sm font-medium text-white rounded-md transition-colors"
+        className="h-8 px-4 text-sm font-medium text-white rounded-md cursor-pointer transition-all duration-150 hover:shadow-md active:scale-95"
         style={{ backgroundColor: '#0496FF' }}
-        onMouseOver={(e) => (e.currentTarget.style.backgroundColor = '#0380d9')}
+        onMouseOver={(e) => (e.currentTarget.style.backgroundColor = '#1B2A4A')}
         onMouseOut={(e) => (e.currentTarget.style.backgroundColor = '#0496FF')}
       >
-        Ver
+        Ir
       </button>
 
       {/* Next arrow */}

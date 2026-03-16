@@ -11,6 +11,7 @@ import {
   Cell,
 } from 'recharts';
 import type { DailyBilling } from '@/lib/types';
+import ChartWrapper from './ChartWrapper';
 
 interface BillingChartProps {
   data: DailyBilling[];
@@ -62,8 +63,8 @@ export default function BillingChart({ data }: BillingChartProps) {
   const maxAmount = Math.max(...data.map((d) => d.amount));
 
   return (
-    <div className="w-full h-64" style={{ minWidth: 0 }}>
-      <ResponsiveContainer width="100%" height="100%" minHeight={1} minWidth={1}>
+    <ChartWrapper className="h-64">
+      <ResponsiveContainer width="100%" height="100%">
         <BarChart
           data={data}
           margin={{ top: 8, right: 16, left: 0, bottom: 4 }}
@@ -102,6 +103,6 @@ export default function BillingChart({ data }: BillingChartProps) {
           </Bar>
         </BarChart>
       </ResponsiveContainer>
-    </div>
+    </ChartWrapper>
   );
 }
