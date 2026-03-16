@@ -48,7 +48,7 @@ export default function KpiCard({ label, value, sublabel, trend, icon }: KpiCard
         )}
       </div>
 
-      <p className="text-3xl font-bold text-gray-900 tabular-nums leading-none mb-2">
+      <p className="text-2xl lg:text-3xl font-bold text-gray-900 tabular-nums leading-none mb-2 truncate">
         {value}
       </p>
 

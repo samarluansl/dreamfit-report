@@ -102,8 +102,10 @@ body {
   background: #ffffff;
   border: 1px solid var(--border);
   border-radius: 0.75rem;
-  padding: 1.5rem;
+  padding: 1.25rem;
   box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.05);
+  overflow: hidden;
+  min-width: 0;
 }
 
 /* Section card */
