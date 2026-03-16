@@ -85,7 +85,7 @@ function getClientName(clubId: string): string {
 
 function getConfig() {
   const url = process.env.ODOO_URL ?? 'https://samarluan-sl.odoo.com';
-  const db = process.env.ODOO_DB ?? 'samarluan-sl';
+  const db = (process.env.ODOO_DB ?? 'samarluan-sl').trim();
   const username = process.env.ODOO_USERNAME ?? 'samuawp@gmail.com';
   const apiKey = process.env.ODOO_API_KEY ?? '93b054a2616e3f54b467ea9e24ba8a067474718b';
   const host = new URL(url).hostname;
