@@ -5,12 +5,15 @@ import type { ClubId } from '@/lib/clubs';
 import { fetchClubSnapshot } from '@/lib/syltek';
 import type { OccupancyByTypeRow } from '@/lib/syltek';
 import { getInvoicesForClub } from '@/lib/odoo';
+import { getMonthlyHistory } from '@/lib/mysql';
 import KpiCard from '@/components/KpiCard';
 import OccupancyTable from '@/components/OccupancyTable';
 import OccupancyByDayTable from '@/components/OccupancyByDayTable';
 import BillingChart from '@/components/BillingChart';
 import CostRevenueChart from '@/components/CostRevenueChart';
 import MonthSelector from '@/components/MonthSelector';
+import MatchesChart from '@/components/MatchesChart';
+import HistoryTable from '@/components/HistoryTable';
 import type { OccupancyByDay } from '@/lib/types';
 
 // No cache — always fetch fresh data
@@ -106,11 +109,16 @@ export default async function ReportPage({ params, searchParams }: PageProps) {
   // Fetch all data in parallel — graceful fallback on error
   let snapshot: Awaited<ReturnType<typeof fetchClubSnapshot>>;
   let invoices: Awaited<ReturnType<typeof getInvoicesForClub>>;
+  let history: Awaited<ReturnType<typeof getMonthlyHistory>> = [];
   try {
-    [snapshot, invoices] = await Promise.all([
+    [snapshot, invoices, history] = await Promise.all([
       fetchClubSnapshot(clubId as 'alcorcon' | 'laspalmas' | 'sanse', startDate, endDate, month, year),
       getInvoicesForClub(clubId as ClubId, year, month).catch((e) => {
         console.error('Odoo fetch error:', e);
+        return [];
+      }),
+      getMonthlyHistory(clubId, 14).catch((e) => {
+        console.error('MySQL fetch error:', e);
         return [];
       }),
     ]);
@@ -148,6 +156,11 @@ export default async function ReportPage({ params, searchParams }: PageProps) {
   const occupancyByDay = snapshot.occupancyByDayAndType
     ? transformOccupancyByType(snapshot.occupancyByDayAndType)
     : [];
+
+  // Current month stats from MySQL
+  const currentMonthStats = history.find(h => h.month === month && h.year === year);
+  const totalMatches = currentMonthStats?.matches ?? 0;
+  const whatsappUsers = currentMonthStats?.whatsappUsers ?? 0;
 
   const monthName = getMonthName(month);
   const periodLabel = `${monthName.charAt(0).toUpperCase()}${monthName.slice(1)} ${year}`;
@@ -195,7 +208,12 @@ export default async function ReportPage({ params, searchParams }: PageProps) {
       </div>
 
       {/* KPI Row */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+      <div className="grid grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
+        <KpiCard
+          label="Partidos"
+          value={totalMatches > 0 ? String(totalMatches) : '-'}
+          sublabel={whatsappUsers > 0 ? `${whatsappUsers} usuarios WhatsApp` : undefined}
+        />
         <KpiCard
           label="Facturacion total"
           value={formatCurrency(totalBilling)}
@@ -217,7 +235,26 @@ export default async function ReportPage({ params, searchParams }: PageProps) {
           value={formatCurrency(mpsCost)}
           sublabel={totalBilling > 0 ? `${((mpsCost / totalBilling) * 100).toFixed(1).replace('.', ',')}% sobre facturacion` : 'Sin facturacion'}
         />
+        <KpiCard
+          label="Ingresos partidos"
+          value={currentMonthStats ? formatCurrency(currentMonthStats.matchRevenue) : '-'}
+          sublabel={currentMonthStats ? `${currentMonthStats.mornings} mañanas / ${currentMonthStats.afternoons} tardes` : undefined}
+        />
       </div>
+
+      {/* Matches chart — punta vs valle */}
+      {history.length > 0 && (
+        <div className="mb-6">
+          <SectionCard
+            title="Partidos"
+            subtitle={`Mañanas (valle) / Tardes (punta) / Noches (valle) — ultimos ${history.length} meses`}
+          >
+            <div className="p-4">
+              <MatchesChart data={history} />
+            </div>
+          </SectionCard>
+        </div>
+      )}
 
       {/* Occupancy by court */}
       {courts.length > 0 && (
@@ -311,9 +348,21 @@ export default async function ReportPage({ params, searchParams }: PageProps) {
         </div>
       )}
 
+      {/* Historic monthly table */}
+      {history.length > 0 && (
+        <div className="mb-6">
+          <SectionCard
+            title="Historico mensual"
+            subtitle={`Ultimos ${history.length} meses`}
+          >
+            <HistoryTable data={history} />
+          </SectionCard>
+        </div>
+      )}
+
       {/* Footer */}
       <p className="text-xs text-gray-400 text-center pb-8">
-        Matches Padel Solutions · Datos en tiempo real desde Syltek y Odoo · {periodLabel}
+        Matches Padel Solutions · Datos en tiempo real desde Syltek, Odoo y MySQL · {periodLabel}
       </p>
     </div>
   );
