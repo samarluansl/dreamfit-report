@@ -2,7 +2,7 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { getClub, getMonthName, formatCurrency, formatPercentage } from '@/lib/clubs';
 import type { ClubId } from '@/lib/clubs';
-import { fetchClubSnapshot } from '@/lib/syltek';
+import { fetchClubSnapshot, aggregateTypeHours } from '@/lib/syltek';
 import type { OccupancyByTypeRow } from '@/lib/syltek';
 import { getInvoicesForClub } from '@/lib/odoo';
 import { getMonthlyHistory } from '@/lib/mysql';
@@ -14,6 +14,7 @@ import CostRevenueChart from '@/components/CostRevenueChart';
 import MonthSelector from '@/components/MonthSelector';
 import MatchesChart from '@/components/MatchesChart';
 import HistoryTable from '@/components/HistoryTable';
+import PupilsChart from '@/components/PupilsChart';
 import type { OccupancyByDay } from '@/lib/types';
 
 // No cache — always fetch fresh data
@@ -162,6 +163,20 @@ export default async function ReportPage({ params, searchParams }: PageProps) {
   const totalMatches = currentMonthStats?.matches ?? 0;
   const whatsappUsers = currentMonthStats?.whatsappUsers ?? 0;
 
+  // Aggregate school / tournament hours from occupancy-by-type data
+  const typeOccupancy = snapshot.occupancyByDayAndType
+    ? aggregateTypeHours(snapshot.occupancyByDayAndType)
+    : { schoolHours: 0, tournamentHours: 0, leagueHours: 0, totalHours: 0 };
+
+  const currentMonthExtra = {
+    schoolHours: typeOccupancy.schoolHours,
+    tournamentHours: typeOccupancy.tournamentHours,
+    totalPupils,
+    totalMembers,
+    month,
+    year,
+  };
+
   const monthName = getMonthName(month);
   const periodLabel = `${monthName.charAt(0).toUpperCase()}${monthName.slice(1)} ${year}`;
 
@@ -239,6 +254,11 @@ export default async function ReportPage({ params, searchParams }: PageProps) {
           label="Ingresos partidos"
           value={currentMonthStats ? formatCurrency(currentMonthStats.matchRevenue) : '-'}
           sublabel={currentMonthStats ? `${currentMonthStats.mornings} mañanas / ${currentMonthStats.afternoons} tardes` : undefined}
+        />
+        <KpiCard
+          label="Coste medio partido 1,5h"
+          value={currentMonthStats && currentMonthStats.avgMatchCost > 0 ? formatCurrency(currentMonthStats.avgMatchCost) : '-'}
+          sublabel={currentMonthStats && currentMonthStats.matches > 0 ? `${currentMonthStats.matches} partidos` : undefined}
         />
       </div>
 
@@ -355,10 +375,28 @@ export default async function ReportPage({ params, searchParams }: PageProps) {
             title="Historico mensual"
             subtitle={`Ultimos ${history.length} meses`}
           >
-            <HistoryTable data={history} />
+            <HistoryTable data={history} currentMonthExtra={currentMonthExtra} />
           </SectionCard>
         </div>
       )}
+
+      {/* Pupils chart — Alumnos escuela vs Socios */}
+      <div className="mb-6">
+        <SectionCard
+          title="Alumnos escuela vs Socios"
+          subtitle={periodLabel}
+        >
+          <div className="p-4">
+            <PupilsChart
+              data={
+                totalPupils > 0 || totalMembers > 0
+                  ? [{ label: periodLabel, alumnos: totalPupils, socios: totalMembers }]
+                  : []
+              }
+            />
+          </div>
+        </SectionCard>
+      </div>
 
       {/* Footer */}
       <p className="text-xs text-gray-400 text-center pb-8">

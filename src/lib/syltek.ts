@@ -682,6 +682,47 @@ export async function fetchSchoolPupils(
 }
 
 // ---------------------------------------------------------------------------
+// 5. Aggregate type hours from OccupancyByTypeRow[]
+// ---------------------------------------------------------------------------
+
+export interface MonthTypeOccupancy {
+  schoolHours: number;
+  tournamentHours: number;
+  leagueHours: number;
+  totalHours: number;
+}
+
+/**
+ * Aggregate OccupancyByTypeRow[] into school, tournament and league hour totals.
+ *
+ * Matching logic (case-insensitive):
+ *   - "escuela" or "competición" -> schoolHours
+ *   - "torneo"                   -> tournamentHours
+ *   - "liga" or "ranking"        -> leagueHours
+ *   - everything else            -> counted in totalHours only
+ */
+export function aggregateTypeHours(rows: OccupancyByTypeRow[]): MonthTypeOccupancy {
+  let schoolHours = 0;
+  let tournamentHours = 0;
+  let leagueHours = 0;
+  let totalHours = 0;
+
+  for (const r of rows) {
+    totalHours += r.hours;
+    const t = r.type.toLowerCase();
+    if (t.includes('escuela') || t.includes('competición') || t.includes('competicion')) {
+      schoolHours += r.hours;
+    } else if (t.includes('torneo')) {
+      tournamentHours += r.hours;
+    } else if (t.includes('liga') || t.includes('ranking')) {
+      leagueHours += r.hours;
+    }
+  }
+
+  return { schoolHours, tournamentHours, leagueHours, totalHours };
+}
+
+// ---------------------------------------------------------------------------
 // Convenience: fetch all data for a club in parallel
 // ---------------------------------------------------------------------------
 
