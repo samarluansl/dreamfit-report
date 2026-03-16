@@ -15,6 +15,7 @@ import type { OccupancyByDay } from '@/lib/types';
 
 // No cache — always fetch fresh data
 export const dynamic = 'force-dynamic';
+export const maxDuration = 30; // seconds — Syltek scraping can be slow
 
 interface PageProps {
   params: Promise<{ clubId: string }>;
@@ -102,11 +103,29 @@ export default async function ReportPage({ params, searchParams }: PageProps) {
   const startDate = `01/${String(month).padStart(2, '0')}/${year}`;
   const endDate = `${lastDay}/${String(month).padStart(2, '0')}/${year}`;
 
-  // Fetch all data in parallel
-  const [snapshot, invoices] = await Promise.all([
-    fetchClubSnapshot(clubId as 'alcorcon' | 'laspalmas' | 'sanse', startDate, endDate, month, year),
-    getInvoicesForClub(clubId as ClubId, year, month).catch(() => []),
-  ]);
+  // Fetch all data in parallel — graceful fallback on error
+  let snapshot: Awaited<ReturnType<typeof fetchClubSnapshot>>;
+  let invoices: Awaited<ReturnType<typeof getInvoicesForClub>>;
+  try {
+    [snapshot, invoices] = await Promise.all([
+      fetchClubSnapshot(clubId as 'alcorcon' | 'laspalmas' | 'sanse', startDate, endDate, month, year),
+      getInvoicesForClub(clubId as ClubId, year, month).catch((e) => {
+        console.error('Odoo fetch error:', e);
+        return [];
+      }),
+    ]);
+  } catch (e) {
+    console.error('Data fetch error:', e);
+    snapshot = {
+      clubId: clubId as 'alcorcon' | 'laspalmas' | 'sanse',
+      clubName: club.name,
+      occupancyByCourt: null,
+      occupancyByDayAndType: null,
+      billing: null,
+      schoolPupils: null,
+    };
+    invoices = [];
+  }
 
   // Compute derived data
   const courts = snapshot.occupancyByCourt ?? [];
