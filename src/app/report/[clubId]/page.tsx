@@ -378,7 +378,7 @@ export default async function ReportPage({ params, searchParams }: PageProps) {
             title="Historico mensual"
             subtitle={`Ultimos ${history.length} meses`}
           >
-            <HistoryTable data={history} currentMonthExtra={currentMonthExtra} />
+            <HistoryTable data={history} />
           </SectionCard>
         </div>
       )}
