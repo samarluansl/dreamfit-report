@@ -340,18 +340,23 @@ export async function fetchOccupancyByCourt(
     const $ = cheerio.load(html);
     const rows: CourtOccupancyRow[] = [];
 
-    $('table.reportData tbody tr').each((_i, el) => {
-      const cells = $(el).find('td');
+    $('table.reportData tr').each((_i, el) => {
+      const $row = $(el);
+      // Skip header row and totals row
+      if ($row.hasClass('headerRow') || $row.hasClass('totalsRow')) return;
+
+      const cells = $row.find('td');
       if (cells.length < 4) return;
 
       const name = $(cells[0]).text().trim();
+      // Skip header-like rows (when there's no explicit thead)
+      if (!name || name === 'Instalación' || name === 'Total') return;
+
       const hoursAvailable = parseSpanishNumber($(cells[1]).text());
       const hoursOccupied = parseSpanishNumber($(cells[2]).text());
       const percentage = parseSpanishNumber(
         $(cells[3]).text().replace('%', '')
       );
-
-      if (!name) return; // Skip empty rows / totals without a name
 
       rows.push({ name, hoursAvailable, hoursOccupied, percentage });
     });
