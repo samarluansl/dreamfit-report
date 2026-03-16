@@ -226,7 +226,8 @@ async function syltekFetch(
 
   const headers: Record<string, string> = {
     Cookie: `${SESSION_COOKIE_NAME}=${cookieValue}`,
-    'User-Agent': 'Mozilla/5.0 (compatible; DreamfitReport/1.0)',
+    'User-Agent':
+      'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36',
     Accept:
       'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
     'Accept-Language': 'es-ES,es;q=0.9',
@@ -234,8 +235,11 @@ async function syltekFetch(
 
   let body: string | undefined;
   if (options.method === 'POST' && options.formData) {
-    headers['Content-Type'] = 'application/x-www-form-urlencoded';
     body = new URLSearchParams(options.formData).toString();
+    headers['Content-Type'] = 'application/x-www-form-urlencoded';
+    headers['Content-Length'] = String(Buffer.byteLength(body));
+    headers['Referer'] = `${baseUrl}${path}`;
+    headers['Origin'] = baseUrl;
   }
 
   let response: Response;
@@ -386,51 +390,69 @@ export async function fetchOccupancyByCourt(
 export async function fetchOccupancyByDayAndType(
   clubId: ClubId,
   startDate?: string,
-  endDate?: string
+  _endDate?: string
 ): Promise<OccupancyByTypeRow[] | null> {
-  const formData: Record<string, string> = {};
-  if (startDate) formData.startDate = startDate;
-  if (endDate) formData.endDate = endDate;
+  // Syltek requires a GET to the page first (establishes session context),
+  // then a POST with advanced search filters to get the data.
+  // The date filter uses StartDate >= startDate (comparer 6).
 
-  const hasFilters = Object.keys(formData).length > 0;
+  // Step 1: GET the page (session setup / CSRF)
+  await syltekFetch(clubId, '/reporting/occupancybyday');
+
+  // Step 2: POST with filters
+  const formFields: Record<string, string> = {
+    'Reservations_metaview_gridName': 'Reservations',
+    'Reservations_advancedSearch': 'true',
+    'Monday': 'on',
+    'Tuesday': 'on',
+    'Wednesday': 'on',
+    'Thursday': 'on',
+    'Friday': 'on',
+    'Saturday': 'on',
+    'Sunday': 'on',
+  };
+  if (startDate) {
+    formFields['Reservations_search_property_0'] = 'StartDate';
+    formFields['Reservations_search_logic_0'] = 'and';
+    formFields['Reservations_search_comparer_0'] = '6'; // >=
+    formFields['Reservations_search_value_0'] = startDate;
+  }
 
   const html = await syltekFetch(
     clubId,
     '/reporting/occupancybyday',
-    hasFilters ? { method: 'POST', formData } : {}
+    { method: 'POST', formData: formFields }
   );
   if (!html) return null;
 
   try {
+    // Try JS data first (most reliable when available)
+    const jsResult = parseOccupancyByHourFromScript(html);
+    if (jsResult && jsResult.length > 0) return jsResult;
+
+    // Fallback: parse HTML table with class "chartData"
     const $ = cheerio.load(html);
     const rows: OccupancyByTypeRow[] = [];
 
-    // The table with class "chartData" has a header row with type columns.
-    // Structure:
-    //   <thead> <tr> <th>Día</th> <th>Reserva</th> <th>Escuela</th> ... </tr> </thead>
-    //   <tbody> <tr> <td>Lunes</td> <td>3.5</td> ... </tr> ... </tbody>
-
     const table = $('table.chartData');
-    if (table.length === 0) {
-      // Fallback: try to read chartOccupancyByHour from embedded JS
-      return parseOccupancyByHourFromScript(html);
-    }
+    if (table.length === 0) return rows.length > 0 ? rows : null;
 
+    // Get type headers from first row (th or td)
     const typeHeaders: string[] = [];
-    table.find('thead tr th').each((_i, th) => {
-      typeHeaders.push($(th).text().trim());
+    table.find('tr').first().find('th, td').each((_i, el) => {
+      typeHeaders.push($(el).text().trim());
     });
 
-    // typeHeaders[0] is the day column label; the rest are type labels.
-    table.find('tbody tr').each((_i, tr) => {
+    // Data rows
+    table.find('tr').slice(1).each((_i, tr) => {
       const cells = $(tr).find('td');
       if (cells.length === 0) return;
 
       const day = $(cells[0]).text().trim();
-      if (!day) return;
+      if (!day || day === 'Total') return;
 
       cells.each((colIdx, td) => {
-        if (colIdx === 0) return; // skip day label column
+        if (colIdx === 0) return;
         const typeLabel = typeHeaders[colIdx] ?? `Tipo ${colIdx}`;
         const hours = parseSpanishNumber($(td).text());
         if (hours > 0) {
