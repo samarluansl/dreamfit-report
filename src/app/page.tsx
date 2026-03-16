@@ -2,8 +2,10 @@ import Link from 'next/link';
 import { CLUBS } from '@/lib/clubs';
 
 function getCurrentPeriod() {
+  // Default to previous month (current month is not closed)
   const now = new Date();
-  return { month: now.getMonth() + 1, year: now.getFullYear() };
+  const prev = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+  return { month: prev.getMonth() + 1, year: prev.getFullYear() };
 }
 
 const MONTH_NAMES: Record<number, string> = {

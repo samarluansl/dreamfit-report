@@ -98,9 +98,12 @@ export default async function ReportPage({ params, searchParams }: PageProps) {
   const club = getClub(clubId);
   if (!club) notFound();
 
+  // Default to previous month (current month is not closed yet)
   const now = new Date();
-  const month = Number(sp.month ?? now.getMonth() + 1);
-  const year = Number(sp.year ?? now.getFullYear());
+  const prevMonth = now.getMonth() === 0 ? 12 : now.getMonth(); // getMonth() is 0-based
+  const prevYear = now.getMonth() === 0 ? now.getFullYear() - 1 : now.getFullYear();
+  const month = Number(sp.month ?? prevMonth);
+  const year = Number(sp.year ?? prevYear);
 
   // Calculate date range for the month
   const lastDay = new Date(year, month, 0).getDate();
