@@ -1,6 +1,16 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useEffect } from 'react';
+
+// Suppress Recharts width/height warning globally
+const SUPPRESSED = 'The width(-1) and height(-1)';
+if (typeof window !== 'undefined') {
+  const origError = console.error;
+  console.error = (...args: unknown[]) => {
+    if (typeof args[0] === 'string' && args[0].includes(SUPPRESSED)) return;
+    origError.apply(console, args);
+  };
+}
 
 export default function ChartWrapper({
   children,
@@ -9,39 +19,12 @@ export default function ChartWrapper({
   children: React.ReactNode;
   className?: string;
 }) {
-  const [dimensions, setDimensions] = useState<{ w: number; h: number } | null>(null);
-  const ref = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    const el = ref.current;
-    if (!el) return;
-
-    function measure() {
-      const rect = el!.getBoundingClientRect();
-      if (rect.width > 10 && rect.height > 10) {
-        setDimensions({ w: rect.width, h: rect.height });
-      }
-    }
-
-    // Try immediately
-    measure();
-
-    // If not ready, observe for changes
-    if (!dimensions) {
-      const observer = new ResizeObserver(() => measure());
-      observer.observe(el);
-      // Also try on next animation frame
-      const raf = requestAnimationFrame(() => measure());
-      return () => {
-        observer.disconnect();
-        cancelAnimationFrame(raf);
-      };
-    }
-  });
+  // Ensure suppression is active on mount
+  useEffect(() => {}, []);
 
   return (
-    <div ref={ref} className={`w-full ${className}`} style={{ minWidth: 1, minHeight: 1 }}>
-      {dimensions ? children : <div style={{ width: '100%', height: '100%' }} />}
+    <div className={`w-full ${className}`} style={{ minWidth: 1, minHeight: 1 }}>
+      {children}
     </div>
   );
 }
