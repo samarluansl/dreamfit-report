@@ -9,33 +9,39 @@ export default function ChartWrapper({
   children: React.ReactNode;
   className?: string;
 }) {
-  const [ready, setReady] = useState(false);
+  const [dimensions, setDimensions] = useState<{ w: number; h: number } | null>(null);
   const ref = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    // Only render chart after mount when container has real dimensions
     const el = ref.current;
     if (!el) return;
-    const observer = new ResizeObserver((entries) => {
-      for (const entry of entries) {
-        if (entry.contentRect.width > 0 && entry.contentRect.height > 0) {
-          setReady(true);
-          observer.disconnect();
-        }
+
+    function measure() {
+      const rect = el!.getBoundingClientRect();
+      if (rect.width > 10 && rect.height > 10) {
+        setDimensions({ w: rect.width, h: rect.height });
       }
-    });
-    observer.observe(el);
-    // Fallback: render after a short delay
-    const timer = setTimeout(() => setReady(true), 100);
-    return () => {
-      observer.disconnect();
-      clearTimeout(timer);
-    };
-  }, []);
+    }
+
+    // Try immediately
+    measure();
+
+    // If not ready, observe for changes
+    if (!dimensions) {
+      const observer = new ResizeObserver(() => measure());
+      observer.observe(el);
+      // Also try on next animation frame
+      const raf = requestAnimationFrame(() => measure());
+      return () => {
+        observer.disconnect();
+        cancelAnimationFrame(raf);
+      };
+    }
+  });
 
   return (
-    <div ref={ref} className={`w-full ${className}`} style={{ minWidth: 0 }}>
-      {ready ? children : null}
+    <div ref={ref} className={`w-full ${className}`} style={{ minWidth: 1, minHeight: 1 }}>
+      {dimensions ? children : <div style={{ width: '100%', height: '100%' }} />}
     </div>
   );
 }
