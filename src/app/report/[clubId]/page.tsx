@@ -304,8 +304,8 @@ export default async function ReportPage({ params, searchParams }: PageProps) {
       )}
 
       {/* Billing chart + Cost vs Revenue */}
-      <div className="grid grid-cols-1 lg:grid-cols-5 gap-6 mb-6">
-        <div className="lg:col-span-3 min-w-0">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+        <div className="min-w-0">
           <SectionCard
             title="Facturacion diaria"
             subtitle={`Total: ${formatCurrency(totalBilling)}`}
@@ -316,7 +316,7 @@ export default async function ReportPage({ params, searchParams }: PageProps) {
           </SectionCard>
         </div>
 
-        <div className="lg:col-span-2 min-w-0">
+        <div className="min-w-0">
           <SectionCard
             title="Facturacion vs Coste MPS"
             subtitle="Margen bruto del mes"

@@ -458,30 +458,40 @@ function parseOccupancyByHourFromScript(
   html: string
 ): OccupancyByTypeRow[] | null {
   try {
-    // Look for: scriptVars.chartOccupancyByHour = {...};
-    const match = html.match(
-      /scriptVars\.chartOccupancyByHour\s*=\s*(\{[\s\S]*?\});/
+    // chartOccupancyByHour is inside scriptVars as:
+    //   chartOccupancyByHour:[{"key":"Reserva","color":{...},"points":[[0, val], [1, val], ...]}, ...]
+    // columnsOccupancyByHour:["lunes","martes",...]
+    const dataMatch = html.match(
+      /chartOccupancyByHour:\s*(\[[\s\S]*?\])\s*,\s*columnsOccupancyByHour/
     );
-    if (!match) return null;
+    const colsMatch = html.match(
+      /columnsOccupancyByHour:\s*(\[[\s\S]*?\])\s*,/
+    );
 
-    // The value is a JS object literal; attempt JSON parse after light cleanup.
-    const raw = match[1]
-      .replace(/'/g, '"')                 // single -> double quotes
-      .replace(/(\w+)\s*:/g, '"$1":');    // unquoted keys -> quoted
+    if (!dataMatch) return null;
 
-    const parsed: Record<string, Record<string, number>> = JSON.parse(raw);
+    interface ChartSeries {
+      key: string;
+      points: Array<[number, number]>;
+    }
+
+    const series: ChartSeries[] = JSON.parse(dataMatch[1]);
+    const dayLabels: string[] = colsMatch ? JSON.parse(colsMatch[1]) : [];
+
     const rows: OccupancyByTypeRow[] = [];
 
-    for (const [type, dayMap] of Object.entries(parsed)) {
-      for (const [day, hours] of Object.entries(dayMap)) {
-        if (typeof hours === 'number' && hours > 0) {
-          rows.push({ day, type, hours });
+    for (const s of series) {
+      for (const [dayIdx, hours] of s.points) {
+        if (hours > 0) {
+          const day = dayLabels[dayIdx] ?? String(dayIdx);
+          rows.push({ day, type: s.key, hours });
         }
       }
     }
 
     return rows;
-  } catch {
+  } catch (err) {
+    console.error('[syltek] Error parsing chartOccupancyByHour:', err);
     return null;
   }
 }

@@ -82,25 +82,25 @@ export default function CostRevenueChart({
   return (
     <div>
       {/* Summary stats */}
-      <div className="grid grid-cols-3 gap-4 mb-6">
-        <div className="text-center p-3 bg-green-50 rounded-lg">
+      <div className="grid grid-cols-3 gap-3 mb-6">
+        <div className="text-center p-3 bg-green-50 rounded-lg overflow-hidden">
           <p className="text-xs text-gray-500 mb-1">Facturacion</p>
-          <p className="text-xl font-bold tabular-nums" style={{ color: '#1b7d00' }}>
+          <p className="text-lg font-bold tabular-nums truncate" style={{ color: '#1b7d00' }}>
             {formatEur(revenue)}
           </p>
         </div>
-        <div className="text-center p-3 bg-blue-50 rounded-lg">
+        <div className="text-center p-3 bg-blue-50 rounded-lg overflow-hidden">
           <p className="text-xs text-gray-500 mb-1">Coste MPS</p>
-          <p className="text-xl font-bold tabular-nums" style={{ color: '#1B2A4A' }}>
+          <p className="text-lg font-bold tabular-nums truncate" style={{ color: '#1B2A4A' }}>
             {formatEur(cost)}
           </p>
         </div>
-        <div className="text-center p-3 bg-gray-50 rounded-lg">
+        <div className="text-center p-3 bg-gray-50 rounded-lg overflow-hidden">
           <p className="text-xs text-gray-500 mb-1">Margen bruto</p>
-          <p className="text-xl font-bold tabular-nums text-gray-900">
-            {formatEur(margin)}{' '}
-            <span className="text-sm font-normal text-gray-500">({marginPct}%)</span>
+          <p className="text-lg font-bold tabular-nums truncate text-gray-900">
+            {formatEur(margin)}
           </p>
+          <p className="text-xs text-gray-500">({marginPct}%)</p>
         </div>
       </div>
 
