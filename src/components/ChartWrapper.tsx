@@ -2,15 +2,21 @@
 
 import { useEffect } from 'react';
 
-// Suppress Recharts width/height warning globally
-const SUPPRESSED = 'The width(-1) and height(-1)';
-if (typeof window !== 'undefined') {
-  const origError = console.error;
-  console.error = (...args: unknown[]) => {
-    if (typeof args[0] === 'string' && args[0].includes(SUPPRESSED)) return;
-    origError.apply(console, args);
-  };
+function suppressRechartsWarning() {
+  if (typeof window === 'undefined') return;
+  const MATCH = 'width(-1)';
+  // Recharts logs via console.warn, console.error, and sometimes console.log
+  for (const method of ['warn', 'error', 'log'] as const) {
+    const orig = console[method];
+    console[method] = (...args: unknown[]) => {
+      if (typeof args[0] === 'string' && args[0].includes(MATCH)) return;
+      orig.apply(console, args);
+    };
+  }
 }
+
+// Run immediately on module load (client-side only)
+suppressRechartsWarning();
 
 export default function ChartWrapper({
   children,
@@ -19,8 +25,7 @@ export default function ChartWrapper({
   children: React.ReactNode;
   className?: string;
 }) {
-  // Ensure suppression is active on mount
-  useEffect(() => {}, []);
+  useEffect(() => { suppressRechartsWarning(); }, []);
 
   return (
     <div className={`w-full ${className}`} style={{ minWidth: 1, minHeight: 1 }}>
