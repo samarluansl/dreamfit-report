@@ -1,8 +1,9 @@
 'use client';
 
 import {
-  BarChart,
+  ComposedChart,
   Bar,
+  Line,
   XAxis,
   YAxis,
   CartesianGrid,
@@ -61,16 +62,16 @@ export default function MatchesChart({ data }: MatchesChartProps) {
 
   const chartData = data.map((d) => ({
     label: d.label,
-    'Mañanas (valle)': d.mornings,
-    'Tardes (punta)': d.afternoons,
-    'Noches (valle)': d.nights,
+    'Valle': d.valle || (d.mornings + d.nights),
+    'Punta': d.punta || d.afternoons,
     total: d.matches,
+    'Año anterior': d.matchesPrevYear,
   }));
 
   return (
-    <div className="w-full h-72" style={{ minWidth: 0 }}>
+    <div className="w-full h-80" style={{ minWidth: 0 }}>
       <ResponsiveContainer width="100%" height="100%">
-        <BarChart
+        <ComposedChart
           data={chartData}
           margin={{ top: 8, right: 16, left: 0, bottom: 4 }}
           barCategoryGap="20%"
@@ -98,10 +99,17 @@ export default function MatchesChart({ data }: MatchesChartProps) {
             iconSize={10}
             wrapperStyle={{ fontSize: '11px', color: '#6b7280' }}
           />
-          <Bar dataKey="Mañanas (valle)" stackId="a" fill="#EFCA08" maxBarSize={32} />
-          <Bar dataKey="Tardes (punta)" stackId="a" fill="#1b7d00" maxBarSize={32} />
-          <Bar dataKey="Noches (valle)" stackId="a" fill="#1B2A4A" radius={[3, 3, 0, 0]} maxBarSize={32} />
-        </BarChart>
+          <Bar dataKey="Valle" stackId="a" fill="#EFCA08" maxBarSize={32} />
+          <Bar dataKey="Punta" stackId="a" fill="#1b7d00" radius={[3, 3, 0, 0]} maxBarSize={32} />
+          <Line
+            dataKey="Año anterior"
+            type="monotone"
+            stroke="#ef4444"
+            strokeWidth={2}
+            dot={{ r: 3, fill: '#ef4444' }}
+            strokeDasharray="5 5"
+          />
+        </ComposedChart>
       </ResponsiveContainer>
     </div>
   );

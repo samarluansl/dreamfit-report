@@ -10,16 +10,27 @@ export interface MonthlyStats {
   month: number;
   year: number;
   label: string;
+  // Partidos
   matches: number;
   matchRevenue: number;
+  matchRevenueIva: number;
   matchHours: number;
-  mornings: number;    // punta mañanas
-  afternoons: number;  // punta tardes
-  nights: number;      // valle noches
+  mornings: number;
+  afternoons: number;
+  nights: number;
+  valle: number;
+  punta: number;
+  // Partidos año anterior
+  matchesPrevYear: number;
+  // Reservas
   reservations: number;
   reservationRevenue: number;
+  reservationRevenueIva: number;
+  // Comunidad
   whatsappUsers: number;
   totalPlayers: number;
+  // Coste medio partido (calculated)
+  avgMatchCost: number;
 }
 
 async function getConnection() {
@@ -47,12 +58,13 @@ export async function getMonthlyHistory(
   try {
     conn = await getConnection();
 
+    // Use billing_all which has more complete data
     const [rows] = await conn.execute<mysql.RowDataPacket[]>(
-      `SELECT Mes, \`Año\`, jpartidos, jreservas, jcursos,
+      `SELECT Mes, \`Año\`, jpartidos, jpartidos0, jreservas, jreservas0,
               \`Usuarios acumulados grupos\`, \`Jugadores totales\`
-       FROM billing 
+       FROM billing_all
        WHERE tenant_id = ?
-       ORDER BY STR_TO_DATE(CONCAT('1/', Mes), '%d/%m/%Y') DESC
+       ORDER BY \`Año\` DESC, CAST(Mes AS UNSIGNED) DESC
        LIMIT ?`,
       [tenantId, months]
     );
@@ -60,29 +72,37 @@ export async function getMonthlyHistory(
     const results: MonthlyStats[] = [];
 
     for (const row of rows) {
-      const mesStr = String(row.Mes || '');
-      const parts = mesStr.split('/');
-      const month = parseInt(parts[0]) || 0;
-      const year = parseInt(parts[1] || row['Año'] || '0');
+      const month = parseInt(String(row.Mes)) || 0;
+      const year = parseInt(String(row['Año'])) || 0;
       if (!month || !year) continue;
 
       const jp = row.jpartidos ? JSON.parse(row.jpartidos) : {};
+      const jp0 = row.jpartidos0 ? JSON.parse(row.jpartidos0) : {};
       const jr = row.jreservas ? JSON.parse(row.jreservas) : {};
+
+      const matchCount = Number(jp.count) || 0;
+      const matchRev = Number(jp.facturacion) || 0;
 
       results.push({
         month,
         year,
         label: `${MONTH_SHORT[month - 1]} ${year}`,
-        matches: Number(jp.count) || 0,
-        matchRevenue: Number(jp.facturacion) || 0,
+        matches: matchCount,
+        matchRevenue: matchRev,
+        matchRevenueIva: Number(jp.facturacion_iva) || 0,
         matchHours: Number(jp.horas) || 0,
         mornings: Number(jp.mañanas) || 0,
         afternoons: Number(jp.tardes) || 0,
         nights: Number(jp.noches) || 0,
+        valle: Number(jp.valle) || 0,
+        punta: Number(jp.punta) || 0,
+        matchesPrevYear: Number(jp0.count) || 0,
         reservations: Number(jr.count) || 0,
         reservationRevenue: Number(jr.facturacion) || 0,
+        reservationRevenueIva: Number(jr.facturacion_iva) || 0,
         whatsappUsers: Number(row['Usuarios acumulados grupos']) || 0,
         totalPlayers: Number(row['Jugadores totales']) || 0,
+        avgMatchCost: matchCount > 0 ? matchRev / matchCount : 0,
       });
     }
 

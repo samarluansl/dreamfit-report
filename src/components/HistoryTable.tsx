@@ -33,10 +33,13 @@ export default function HistoryTable({ data }: HistoryTableProps) {
       title: 'PARTIDOS',
       rows: [
         { label: 'Partidos totales', key: 'matches' as const, format: fmt },
+        { label: 'Partidos año anterior', key: 'matchesPrevYear' as const, format: fmt },
         { label: 'Ingresos por partidos', key: 'matchRevenue' as const, format: fmtEur },
-        { label: 'Partidos mañanas (valle)', key: 'mornings' as const, format: fmt },
-        { label: 'Partidos tardes (punta)', key: 'afternoons' as const, format: fmt },
-        { label: 'Partidos noches (valle)', key: 'nights' as const, format: fmt },
+        { label: 'Ingresos partidos (IVA)', key: 'matchRevenueIva' as const, format: fmtEur },
+        { label: 'Horas partidos', key: 'matchHours' as const, format: fmt },
+        { label: 'Coste medio partido', key: 'avgMatchCost' as const, format: fmtEur },
+        { label: 'Partidos punta', key: 'punta' as const, format: fmt },
+        { label: 'Partidos valle', key: 'valle' as const, format: fmt },
       ],
     },
     {
@@ -44,6 +47,7 @@ export default function HistoryTable({ data }: HistoryTableProps) {
       rows: [
         { label: 'Reservas totales', key: 'reservations' as const, format: fmt },
         { label: 'Ingresos por reservas', key: 'reservationRevenue' as const, format: fmtEur },
+        { label: 'Ingresos reservas (IVA)', key: 'reservationRevenueIva' as const, format: fmtEur },
       ],
     },
     {
