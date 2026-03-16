@@ -97,7 +97,7 @@ export default function CostRevenueChart({
       </div>
 
       {/* Grouped bar chart */}
-      <div className="w-full h-48">
+      <div className="w-full h-48" style={{ minWidth: 0 }}>
         <ResponsiveContainer width="100%" height="100%">
           <BarChart
             data={chartData}

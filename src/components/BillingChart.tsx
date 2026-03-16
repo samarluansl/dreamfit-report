@@ -51,10 +51,18 @@ function formatYAxis(value: number): string {
 }
 
 export default function BillingChart({ data }: BillingChartProps) {
+  if (!data || data.length === 0) {
+    return (
+      <div className="w-full h-64 flex items-center justify-center text-gray-400 text-sm">
+        Sin datos de facturacion para este periodo
+      </div>
+    );
+  }
+
   const maxAmount = Math.max(...data.map((d) => d.amount));
 
   return (
-    <div className="w-full h-64">
+    <div className="w-full h-64" style={{ minWidth: 0 }}>
       <ResponsiveContainer width="100%" height="100%">
         <BarChart
           data={data}

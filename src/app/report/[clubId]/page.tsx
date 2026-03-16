@@ -114,8 +114,9 @@ export default async function ReportPage({ params, searchParams }: PageProps) {
         return [];
       }),
     ]);
-  } catch (e) {
-    console.error('Data fetch error:', e);
+  } catch (e: unknown) {
+    const err = e instanceof Error ? e : new Error(String(e));
+    console.error('Data fetch error:', err.message, err.stack);
     snapshot = {
       clubId: clubId as 'alcorcon' | 'laspalmas' | 'sanse',
       clubName: club.name,
