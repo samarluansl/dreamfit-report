@@ -517,7 +517,13 @@ export async function fetchBillingByMonth(
     const dailyData: BillingDayEntry[] = [];
     let total = 0;
 
-    const chartModelRaw = extractScriptVar(html, 'chartModel');
+    // chartModel is inside scriptVars: var scriptVars = { ..., chartModel: [...], ... }
+    // Extract it with a regex that matches the array
+    let chartModelRaw = extractScriptVar(html, 'chartModel');
+    if (!chartModelRaw) {
+      const cmMatch = html.match(/chartModel:\s*(\[[\s\S]*?\])\s*,\s*menuNodes/);
+      if (cmMatch) chartModelRaw = cmMatch[1];
+    }
     if (chartModelRaw) {
       // chartModel is a JSON array: [{series:[{data:[[day, amount], ...]}]}]
       // Attempt direct JSON parse first (it may already be valid JSON).
