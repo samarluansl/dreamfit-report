@@ -60,6 +60,14 @@ export default function CostRevenueChart({
   cost,
   invoicePdfUrl,
 }: CostRevenueChartProps) {
+  if (revenue === 0 && cost === 0) {
+    return (
+      <div className="p-8 text-center text-gray-400 text-sm">
+        Sin datos de facturacion ni coste para este periodo
+      </div>
+    );
+  }
+
   const margin = revenue - cost;
   const marginPct = revenue > 0 ? ((margin / revenue) * 100).toFixed(1) : '0.0';
 

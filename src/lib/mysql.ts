@@ -58,13 +58,14 @@ export async function getMonthlyHistory(
   try {
     conn = await getConnection();
 
-    // Use billing_all which has more complete data
+    // Use billing table — billing_all only has current month
+    // Mes is a simple number ("1", "2", ..., "12"), Año is "2025", "2026" etc.
     const [rows] = await conn.execute<mysql.RowDataPacket[]>(
       `SELECT Mes, \`Año\`, jpartidos, jpartidos0, jreservas, jreservas0,
               \`Usuarios acumulados grupos\`, \`Jugadores totales\`
-       FROM billing_all
+       FROM billing
        WHERE tenant_id = ?
-       ORDER BY \`Año\` DESC, CAST(Mes AS UNSIGNED) DESC
+       ORDER BY CAST(\`Año\` AS UNSIGNED) DESC, CAST(Mes AS UNSIGNED) DESC
        LIMIT ?`,
       [tenantId, months]
     );
@@ -72,8 +73,10 @@ export async function getMonthlyHistory(
     const results: MonthlyStats[] = [];
 
     for (const row of rows) {
-      const month = parseInt(String(row.Mes)) || 0;
-      const year = parseInt(String(row['Año'])) || 0;
+      // Mes can be "2" or "2/2026" — handle both
+      const mesStr = String(row.Mes || '');
+      const month = parseInt(mesStr.split('/')[0]) || 0;
+      const year = parseInt(String(row['Año'])) || parseInt(mesStr.split('/')[1] || '0') || 0;
       if (!month || !year) continue;
 
       const jp = row.jpartidos ? JSON.parse(row.jpartidos) : {};

@@ -641,44 +641,36 @@ export async function fetchBillingByMonth(
 export async function fetchSchoolPupils(
   clubId: ClubId
 ): Promise<SchoolPupils | null> {
-  const [totalHtml, membersHtml] = await Promise.all([
-    syltekFetch(clubId, '/pupils/coursePupils'),
-    syltekFetch(clubId, '/pupils/coursePupils?customertype=socio'),
-  ]);
+  // Single request — count socios from the "Tipo Cliente" column in HTML
+  const html = await syltekFetch(clubId, '/pupils/coursePupils');
+  if (!html) return null;
 
-  if (!totalHtml) return null;
-
-  function extractRowCount(html: string): number {
+  try {
     const $ = cheerio.load(html);
 
-    // Pattern 1: "1-25 de 137" anywhere in text
-    const pageText = $('body').text();
-    const deMatch = pageText.match(/\bde\s+(\d[\d.,]*)\b/i);
+    // Total from pagination header "1-N de N"
+    let total = 0;
+    const rowCountSpan = $('.rowCount').text();
+    const deMatch = rowCountSpan.match(/de\s+(\d+)/);
     if (deMatch) {
-      const n = parseInt(deMatch[1].replace(/[.,]/g, ''), 10);
-      if (!isNaN(n)) return n;
+      total = parseInt(deMatch[1], 10);
+    } else {
+      // Fallback: count content rows (exclude tag rows)
+      total = $('table.listGrid tr.contentRow').length;
     }
 
-    // Pattern 2: data attribute on a pagination element
-    const paginationTotal = $('[data-total], [data-count]').first();
-    if (paginationTotal.length) {
-      const attr =
-        paginationTotal.attr('data-total') ??
-        paginationTotal.attr('data-count') ??
-        '';
-      const n = parseInt(attr, 10);
-      if (!isNaN(n)) return n;
-    }
+    // Count members by finding ">Socio<" in the Tipo Cliente column
+    let members = 0;
+    $('table.listGrid tr.contentRow td').each((_i, el) => {
+      const text = $(el).text().trim();
+      if (text === 'Socio') members++;
+    });
 
-    // Pattern 3: count the actual tbody rows as a last resort
-    const rowCount = $('table tbody tr').length;
-    return rowCount;
+    return { total, members };
+  } catch (err) {
+    console.error('[syltek] Error parsing pupils:', err);
+    return null;
   }
-
-  const total = extractRowCount(totalHtml);
-  const members = membersHtml ? extractRowCount(membersHtml) : 0;
-
-  return { total, members };
 }
 
 // ---------------------------------------------------------------------------
