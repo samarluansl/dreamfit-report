@@ -1,5 +1,11 @@
 import type { CourtOccupancy } from '@/lib/types';
 
+function fmtHours(n: number): string {
+  // Format with comma as decimal separator, no thousands separator issues
+  if (Number.isInteger(n)) return `${n}`;
+  return n.toFixed(2).replace('.', ',');
+}
+
 interface OccupancyTableProps {
   data: CourtOccupancy[];
 }
@@ -55,10 +61,10 @@ export default function OccupancyTable({ data }: OccupancyTableProps) {
             <tr key={row.name}>
               <td className="font-medium text-gray-800">{row.name}</td>
               <td className="text-right tabular-nums text-gray-600">
-                {row.hoursAvailable.toLocaleString('es-ES')}h
+                {fmtHours(row.hoursAvailable)}h
               </td>
               <td className="text-right tabular-nums text-gray-600">
-                {row.hoursOccupied.toLocaleString('es-ES')}h
+                {fmtHours(row.hoursOccupied)}h
               </td>
               <td className="text-right">
                 <PctCell value={row.percentage} />
@@ -73,10 +79,10 @@ export default function OccupancyTable({ data }: OccupancyTableProps) {
           <tr>
             <td>Total</td>
             <td className="text-right tabular-nums">
-              {totalAvailable.toLocaleString('es-ES')}h
+              {fmtHours(totalAvailable)}h
             </td>
             <td className="text-right tabular-nums">
-              {totalOccupied.toLocaleString('es-ES')}h
+              {fmtHours(totalOccupied)}h
             </td>
             <td className="text-right">
               <PctCell value={totalPct} />

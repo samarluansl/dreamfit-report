@@ -291,17 +291,8 @@ export default async function ReportPage({ params, searchParams }: PageProps) {
         </div>
       )}
 
-      {/* Occupancy by day/type */}
-      {occupancyByDay.length > 0 && (
-        <div className="mb-6">
-          <SectionCard
-            title="Ocupacion por dias agrupado por tipos de reservas"
-            subtitle={periodLabel}
-          >
-            <OccupancyByDayTable data={occupancyByDay} />
-          </SectionCard>
-        </div>
-      )}
+      {/* Occupancy by day/type — hidden until cache system provides monthly data */}
+      {/* occupancyByDay data is cumulative from Syltek, not monthly */}
 
       {/* Billing chart + Cost vs Revenue */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
