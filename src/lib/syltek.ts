@@ -80,6 +80,17 @@ export interface SchoolPupils {
   members: number;
 }
 
+export interface BookerStats {
+  /** Total reservations in the period (Status != cancelled) */
+  totalReservations: number;
+  /** Reservations by socios */
+  socioReservations: number;
+  /** Reservations by no-socios */
+  noSocioReservations: number;
+  /** Reservations by staff */
+  staffReservations: number;
+}
+
 // ---------------------------------------------------------------------------
 // Internal session cache
 // ---------------------------------------------------------------------------
@@ -717,7 +728,146 @@ export async function fetchSchoolPupils(
 }
 
 // ---------------------------------------------------------------------------
-// 5. Aggregate type hours from OccupancyByTypeRow[]
+// 5. Total socios count (from Customers page)
+// ---------------------------------------------------------------------------
+
+/**
+ * Fetch the total number of "Socio" customers from the CRM.
+ * Only reads the pagination header — no need to iterate pages.
+ */
+export async function fetchTotalSocios(clubId: ClubId): Promise<number> {
+  const params = new URLSearchParams({
+    'Customers_metaview_gridName': 'Customers',
+    'Customers_searchProperty_0': 'IdCustomerType',
+    'Customers_searchComparer_0': '=',
+    'Customers_searchValue_0': 'socio',
+    'Customers_advancedSearch': 'true',
+    'Customers_metaview_pageSize': '20',
+  });
+
+  const html = await syltekFetch(clubId, `/bookings/customers/browse?${params.toString()}`);
+  if (!html) return 0;
+
+  try {
+    const $ = cheerio.load(html);
+    // Pagination shows "1-20 de 41.032" — extract the total
+    const rowCountText = $('.rowCount').text();
+    const deMatch = rowCountText.match(/de\s+([\d.]+)/);
+    if (deMatch) {
+      return parseInt(deMatch[1].replace(/\./g, ''), 10);
+    }
+    // Fallback: "Los N Clientes" link
+    const losMatch = html.match(/Los\s+([\d.]+)\s+Clientes/);
+    if (losMatch) {
+      return parseInt(losMatch[1].replace(/\./g, ''), 10);
+    }
+    return 0;
+  } catch (err) {
+    console.error('[syltek] Error parsing total socios:', err);
+    return 0;
+  }
+}
+
+// ---------------------------------------------------------------------------
+// 6. Reservation stats by customer type (socios que reservan)
+// ---------------------------------------------------------------------------
+
+/**
+ * Read the total count from a Syltek browse page pagination header.
+ * Expects "1-20 de N" or "Los N ..." format.
+ */
+function parsePaginationTotal(html: string): number {
+  const $ = cheerio.load(html);
+  const rowCountText = $('.rowCount').text();
+  const deMatch = rowCountText.match(/de\s+([\d.]+)/);
+  if (deMatch) return parseInt(deMatch[1].replace(/\./g, ''), 10);
+  // Fallback: "Los N Reservas" link
+  const losMatch = html.match(/Los\s+([\d.]+)\s+/);
+  if (losMatch) return parseInt(losMatch[1].replace(/\./g, ''), 10);
+  return 0;
+}
+
+/**
+ * Fetch reservation counts broken down by customer type for a given month.
+ *
+ * Instead of iterating pages, we make 3 lightweight requests and read only
+ * the pagination total ("X de N"):
+ *   1. All reservations (Status != cancelled, date range)
+ *   2. Same + IdCustomerType = Socio
+ *   3. Same + IdCustomerType = Staff
+ */
+export async function fetchBookerStats(
+  clubId: ClubId,
+  startDate: string,
+  endDate: string
+): Promise<BookerStats | null> {
+  // Base filters: Status != 2 (cancelled) + date range
+  const baseFilters: Record<string, string> = {
+    'Reservations_metaview_gridName': 'Reservations',
+    'Reservations_advancedSearch': 'true',
+    'Reservations_metaview_pageSize': '20',
+    'Reservations_searchProperty_0': 'Status',
+    'Reservations_searchComparer_0': '!=',
+    'Reservations_searchValue_0': '2',
+    'Reservations_searchOperator_1': 'and',
+    'Reservations_searchProperty_1': 'StartDate',
+    'Reservations_searchComparer_1': '6', // >=
+    'Reservations_searchValue_1': startDate,
+    'Reservations_searchOperator_2': 'and',
+    'Reservations_searchProperty_2': 'StartDate',
+    'Reservations_searchComparer_2': '7', // <=
+    'Reservations_searchValue_2': endDate,
+  };
+
+  // GET the page first (session setup)
+  await syltekFetch(clubId, '/bookings/reservations/browse');
+
+  // Query 1: Total reservations
+  const htmlTotal = await syltekFetch(clubId, '/bookings/reservations/browse', {
+    method: 'POST', formData: baseFilters,
+  });
+  const totalReservations = htmlTotal ? parsePaginationTotal(htmlTotal) : 0;
+  if (totalReservations === 0) return null;
+
+  // Query 2: Socio reservations (add filter IdCustomerType = Socio)
+  // Need fresh session context for each filtered POST
+  await syltekFetch(clubId, '/bookings/reservations/browse');
+  const socioFilters = {
+    ...baseFilters,
+    'Reservations_searchOperator_3': 'and',
+    'Reservations_searchProperty_3': 'IdCustomerType',
+    'Reservations_searchComparer_3': '=',
+    'Reservations_searchValue_3': 'Socio',
+  };
+  const htmlSocio = await syltekFetch(clubId, '/bookings/reservations/browse', {
+    method: 'POST', formData: socioFilters,
+  });
+  const socioReservations = htmlSocio ? parsePaginationTotal(htmlSocio) : 0;
+
+  // Query 3: Staff reservations
+  await syltekFetch(clubId, '/bookings/reservations/browse');
+  const staffFilters = {
+    ...baseFilters,
+    'Reservations_searchOperator_3': 'and',
+    'Reservations_searchProperty_3': 'IdCustomerType',
+    'Reservations_searchComparer_3': '=',
+    'Reservations_searchValue_3': 'Staff',
+  };
+  const htmlStaff = await syltekFetch(clubId, '/bookings/reservations/browse', {
+    method: 'POST', formData: staffFilters,
+  });
+  const staffReservations = htmlStaff ? parsePaginationTotal(htmlStaff) : 0;
+
+  return {
+    totalReservations,
+    socioReservations,
+    noSocioReservations: totalReservations - socioReservations - staffReservations,
+    staffReservations,
+  };
+}
+
+// ---------------------------------------------------------------------------
+// 6. Aggregate type hours from OccupancyByTypeRow[]
 // ---------------------------------------------------------------------------
 
 export interface MonthTypeOccupancy {
@@ -768,6 +918,8 @@ export interface ClubSnapshot {
   occupancyByDayAndType: OccupancyByTypeRow[] | null;
   billing: BillingByMonth | null;
   schoolPupils: SchoolPupils | null;
+  bookerStats: BookerStats | null;
+  totalSocios: number;
 }
 
 /**
@@ -787,12 +939,14 @@ export async function fetchClubSnapshot(
   billingMonth: number,
   billingYear: number
 ): Promise<ClubSnapshot> {
-  const [occupancyByCourt, occupancyByDayAndType, billing, schoolPupils] =
+  const [occupancyByCourt, occupancyByDayAndType, billing, schoolPupils, bookerStats, totalSocios] =
     await Promise.all([
       fetchOccupancyByCourt(clubId, startDate, endDate),
       fetchOccupancyByDayAndType(clubId, startDate, endDate),
       fetchBillingByMonth(clubId, billingMonth, billingYear),
       fetchSchoolPupils(clubId),
+      fetchBookerStats(clubId, startDate, endDate),
+      fetchTotalSocios(clubId),
     ]);
 
   return {
@@ -802,6 +956,8 @@ export async function fetchClubSnapshot(
     occupancyByDayAndType,
     billing,
     schoolPupils,
+    bookerStats,
+    totalSocios,
   };
 }
 

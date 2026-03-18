@@ -136,6 +136,8 @@ export default async function ReportPage({ params, searchParams }: PageProps) {
       occupancyByDayAndType: null,
       billing: null,
       schoolPupils: null,
+      bookerStats: null,
+      totalSocios: 0,
     };
     invoices = [];
   }
@@ -156,6 +158,12 @@ export default async function ReportPage({ params, searchParams }: PageProps) {
 
   const mpsCost = invoices.reduce((s, inv) => s + inv.amount_total, 0);
   const mainInvoice = invoices[0];
+
+  const bookerStats = snapshot.bookerStats;
+  const totalSocios = snapshot.totalSocios;
+  const socioResPct = bookerStats && bookerStats.totalReservations > 0
+    ? (bookerStats.socioReservations / bookerStats.totalReservations) * 100
+    : 0;
 
   const occupancyByDay = snapshot.occupancyByDayAndType
     ? transformOccupancyByType(snapshot.occupancyByDayAndType)
@@ -262,6 +270,11 @@ export default async function ReportPage({ params, searchParams }: PageProps) {
           label="Coste medio partido 1,5h"
           value={currentMonthStats && currentMonthStats.avgMatchCost > 0 ? formatCurrency(currentMonthStats.avgMatchCost) : '-'}
           sublabel={currentMonthStats && currentMonthStats.matches > 0 ? `${currentMonthStats.matches} partidos` : undefined}
+        />
+        <KpiCard
+          label="Reservas socios"
+          value={bookerStats ? formatPercentage(socioResPct) : '-'}
+          sublabel={bookerStats ? `${bookerStats.socioReservations} socio · ${bookerStats.noSocioReservations} no socio · ${bookerStats.staffReservations} staff` : undefined}
         />
       </div>
 
