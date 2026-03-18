@@ -274,7 +274,7 @@ export default async function ReportPage({ params, searchParams }: PageProps) {
         <KpiCard
           label="Desglose reservas"
           value={bookerStats ? `${bookerStats.totalReservations} reservas` : '-'}
-          sublabel={bookerStats && bookerStats.totalReservations > 0 ? `${formatPercentage((bookerStats.socioReservations / bookerStats.totalReservations) * 100)} socio · ${formatPercentage((bookerStats.noSocioReservations / bookerStats.totalReservations) * 100)} no socio · ${formatPercentage((bookerStats.staffReservations / bookerStats.totalReservations) * 100)} staff · ${formatPercentage((bookerStats.playtomicReservations / bookerStats.totalReservations) * 100)} playtomic` : undefined}
+          sublabel={bookerStats && bookerStats.totalReservations > 0 ? `${formatPercentage((bookerStats.socioReservations / bookerStats.totalReservations) * 100)} socio · ${formatPercentage(((bookerStats.noSocioReservations - bookerStats.playtomicReservations) / bookerStats.totalReservations) * 100)} no socio · ${formatPercentage((bookerStats.staffReservations / bookerStats.totalReservations) * 100)} staff · ${formatPercentage((bookerStats.playtomicReservations / bookerStats.totalReservations) * 100)} playtomic` : undefined}
         />
       </div>
 
