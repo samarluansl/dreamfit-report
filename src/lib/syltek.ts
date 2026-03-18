@@ -790,20 +790,48 @@ function parsePaginationTotal(html: string): number {
 }
 
 /**
+ * Map a target month/year to the Syltek date preset comparer.
+ *
+ * Syltek browse pages use numeric preset comparers for date fields:
+ *   5 = this month
+ *   6 = last month
+ *   11 = 2 months ago
+ *
+ * Returns the comparer string, or null if the target month is too old.
+ */
+function getDateComparer(targetMonth: number, targetYear: number): string | null {
+  const now = new Date();
+  const currentMonth = now.getMonth() + 1; // 1-based
+  const currentYear = now.getFullYear();
+
+  const monthsBack =
+    (currentYear - targetYear) * 12 + (currentMonth - targetMonth);
+
+  if (monthsBack === 0) return '5';  // this month
+  if (monthsBack === 1) return '6';  // last month
+  if (monthsBack === 2) return '11'; // 2 months ago
+  return null; // not supported for older months
+}
+
+/**
  * Fetch reservation counts broken down by customer type for a given month.
  *
- * Instead of iterating pages, we make 3 lightweight requests and read only
- * the pagination total ("X de N"):
- *   1. All reservations (Status != cancelled, date range)
- *   2. Same + IdCustomerType = Socio
- *   3. Same + IdCustomerType = Staff
+ * Uses Syltek date presets (comparer 5/6/11) since the browse page doesn't
+ * accept explicit date ranges. Makes 4 lightweight requests reading only
+ * pagination totals.
  */
 export async function fetchBookerStats(
   clubId: ClubId,
-  startDate: string,
-  endDate: string
+  _startDate: string,
+  _endDate: string,
+  month?: number,
+  year?: number
 ): Promise<BookerStats | null> {
-  // Base filters: Status != 2 (cancelled) + date range
+  // Determine the correct date preset comparer
+  const dateComparer = month && year ? getDateComparer(month, year) : '6';
+  if (!dateComparer) return null; // month too old for browse page presets
+
+  // Base filters: Status != 2 (cancelled) + date preset
   const baseFilters: Record<string, string> = {
     'Reservations_metaview_gridName': 'Reservations',
     'Reservations_advancedSearch': 'true',
@@ -813,12 +841,7 @@ export async function fetchBookerStats(
     'Reservations_searchValue_0': '2',
     'Reservations_searchOperator_1': 'and',
     'Reservations_searchProperty_1': 'StartDate',
-    'Reservations_searchComparer_1': '6', // >=
-    'Reservations_searchValue_1': startDate,
-    'Reservations_searchOperator_2': 'and',
-    'Reservations_searchProperty_2': 'StartDate',
-    'Reservations_searchComparer_2': '7', // <=
-    'Reservations_searchValue_2': endDate,
+    'Reservations_searchComparer_1': dateComparer,
   };
 
   // GET the page first (session setup)
@@ -832,14 +855,13 @@ export async function fetchBookerStats(
   if (totalReservations === 0) return null;
 
   // Query 2: Socio reservations (add filter IdCustomerType = Socio)
-  // Need fresh session context for each filtered POST
   await syltekFetch(clubId, '/bookings/reservations/browse');
   const socioFilters = {
     ...baseFilters,
-    'Reservations_searchOperator_3': 'and',
-    'Reservations_searchProperty_3': 'IdCustomerType',
-    'Reservations_searchComparer_3': '=',
-    'Reservations_searchValue_3': 'Socio',
+    'Reservations_searchOperator_2': 'and',
+    'Reservations_searchProperty_2': 'IdCustomerType',
+    'Reservations_searchComparer_2': '=',
+    'Reservations_searchValue_2': 'Socio',
   };
   const htmlSocio = await syltekFetch(clubId, '/bookings/reservations/browse', {
     method: 'POST', formData: socioFilters,
@@ -850,10 +872,10 @@ export async function fetchBookerStats(
   await syltekFetch(clubId, '/bookings/reservations/browse');
   const staffFilters = {
     ...baseFilters,
-    'Reservations_searchOperator_3': 'and',
-    'Reservations_searchProperty_3': 'IdCustomerType',
-    'Reservations_searchComparer_3': '=',
-    'Reservations_searchValue_3': 'Staff',
+    'Reservations_searchOperator_2': 'and',
+    'Reservations_searchProperty_2': 'IdCustomerType',
+    'Reservations_searchComparer_2': '=',
+    'Reservations_searchValue_2': 'Staff',
   };
   const htmlStaff = await syltekFetch(clubId, '/bookings/reservations/browse', {
     method: 'POST', formData: staffFilters,
@@ -864,10 +886,10 @@ export async function fetchBookerStats(
   await syltekFetch(clubId, '/bookings/reservations/browse');
   const playtomicFilters = {
     ...baseFilters,
-    'Reservations_searchOperator_3': 'and',
-    'Reservations_searchProperty_3': 'Name',
-    'Reservations_searchComparer_3': '=',
-    'Reservations_searchValue_3': 'Playtomic',
+    'Reservations_searchOperator_2': 'and',
+    'Reservations_searchProperty_2': 'Name',
+    'Reservations_searchComparer_2': '=',
+    'Reservations_searchValue_2': 'Playtomic',
   };
   const htmlPlaytomic = await syltekFetch(clubId, '/bookings/reservations/browse', {
     method: 'POST', formData: playtomicFilters,
@@ -964,7 +986,7 @@ export async function fetchClubSnapshot(
       fetchOccupancyByDayAndType(clubId, startDate, endDate),
       fetchBillingByMonth(clubId, billingMonth, billingYear),
       fetchSchoolPupils(clubId),
-      fetchBookerStats(clubId, startDate, endDate),
+      fetchBookerStats(clubId, startDate, endDate, billingMonth, billingYear),
       fetchTotalSocios(clubId),
     ]);
 
