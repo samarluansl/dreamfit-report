@@ -15,6 +15,7 @@ import MonthSelector from '@/components/MonthSelector';
 import MatchesChart from '@/components/MatchesChart';
 import HistoryTable from '@/components/HistoryTable';
 import PupilsChart from '@/components/PupilsChart';
+import ReservationBreakdown from '@/components/ReservationBreakdown';
 import type { OccupancyByDay } from '@/lib/types';
 
 // No cache — always fetch fresh data
@@ -271,11 +272,11 @@ export default async function ReportPage({ params, searchParams }: PageProps) {
           value={currentMonthStats && currentMonthStats.avgMatchCost > 0 ? formatCurrency(currentMonthStats.avgMatchCost) : '-'}
           sublabel={currentMonthStats && currentMonthStats.matches > 0 ? `${currentMonthStats.matches} partidos` : undefined}
         />
-        <KpiCard
-          label="Desglose reservas"
-          value={bookerStats ? `${bookerStats.totalReservations} reservas` : '-'}
-          sublabel={bookerStats && bookerStats.totalReservations > 0 ? `${formatPercentage((bookerStats.socioReservations / bookerStats.totalReservations) * 100)} socio · ${formatPercentage(((bookerStats.noSocioReservations - bookerStats.playtomicReservations) / bookerStats.totalReservations) * 100)} no socio · ${formatPercentage((bookerStats.staffReservations / bookerStats.totalReservations) * 100)} staff · ${formatPercentage((bookerStats.playtomicReservations / bookerStats.totalReservations) * 100)} playtomic` : undefined}
-        />
+        {bookerStats && bookerStats.totalReservations > 0 ? (
+          <ReservationBreakdown stats={bookerStats} />
+        ) : (
+          <KpiCard label="Desglose reservas" value="-" />
+        )}
       </div>
 
       {/* Matches chart — punta vs valle */}
