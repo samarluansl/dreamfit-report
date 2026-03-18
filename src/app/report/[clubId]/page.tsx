@@ -272,9 +272,9 @@ export default async function ReportPage({ params, searchParams }: PageProps) {
           sublabel={currentMonthStats && currentMonthStats.matches > 0 ? `${currentMonthStats.matches} partidos` : undefined}
         />
         <KpiCard
-          label="Reservas socios"
-          value={bookerStats ? formatPercentage(socioResPct) : '-'}
-          sublabel={bookerStats ? `${bookerStats.socioReservations} socio · ${bookerStats.noSocioReservations} no socio · ${bookerStats.staffReservations} staff · ${bookerStats.playtomicReservations} playtomic` : undefined}
+          label="Desglose reservas"
+          value={bookerStats ? `${bookerStats.totalReservations} reservas` : '-'}
+          sublabel={bookerStats && bookerStats.totalReservations > 0 ? `${formatPercentage((bookerStats.socioReservations / bookerStats.totalReservations) * 100)} socio · ${formatPercentage((bookerStats.noSocioReservations / bookerStats.totalReservations) * 100)} no socio · ${formatPercentage((bookerStats.staffReservations / bookerStats.totalReservations) * 100)} staff · ${formatPercentage((bookerStats.playtomicReservations / bookerStats.totalReservations) * 100)} playtomic` : undefined}
         />
       </div>
 
