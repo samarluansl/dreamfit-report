@@ -89,6 +89,8 @@ export interface BookerStats {
   noSocioReservations: number;
   /** Reservations by staff */
   staffReservations: number;
+  /** Reservations from Playtomic (Name = Playtomic) */
+  playtomicReservations: number;
 }
 
 // ---------------------------------------------------------------------------
@@ -858,11 +860,28 @@ export async function fetchBookerStats(
   });
   const staffReservations = htmlStaff ? parsePaginationTotal(htmlStaff) : 0;
 
+  // Query 4: Playtomic reservations (Name = Playtomic)
+  await syltekFetch(clubId, '/bookings/reservations/browse');
+  const playtomicFilters = {
+    ...baseFilters,
+    'Reservations_searchOperator_3': 'and',
+    'Reservations_searchProperty_3': 'Name',
+    'Reservations_searchComparer_3': '=',
+    'Reservations_searchValue_3': 'Playtomic',
+  };
+  const htmlPlaytomic = await syltekFetch(clubId, '/bookings/reservations/browse', {
+    method: 'POST', formData: playtomicFilters,
+  });
+  const playtomicReservations = htmlPlaytomic ? parsePaginationTotal(htmlPlaytomic) : 0;
+
+  const noSocioReservations = totalReservations - socioReservations - staffReservations;
+
   return {
     totalReservations,
     socioReservations,
-    noSocioReservations: totalReservations - socioReservations - staffReservations,
+    noSocioReservations,
     staffReservations,
+    playtomicReservations,
   };
 }
 

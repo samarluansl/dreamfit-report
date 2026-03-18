@@ -274,7 +274,7 @@ export default async function ReportPage({ params, searchParams }: PageProps) {
         <KpiCard
           label="Reservas socios"
           value={bookerStats ? formatPercentage(socioResPct) : '-'}
-          sublabel={bookerStats ? `${bookerStats.socioReservations} socio · ${bookerStats.noSocioReservations} no socio · ${bookerStats.staffReservations} staff` : undefined}
+          sublabel={bookerStats ? `${bookerStats.socioReservations} socio · ${bookerStats.noSocioReservations} no socio · ${bookerStats.staffReservations} staff · ${bookerStats.playtomicReservations} playtomic` : undefined}
         />
       </div>
 
