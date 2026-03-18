@@ -390,11 +390,12 @@ export async function fetchOccupancyByCourt(
 export async function fetchOccupancyByDayAndType(
   clubId: ClubId,
   startDate?: string,
-  _endDate?: string
+  endDate?: string
 ): Promise<OccupancyByTypeRow[] | null> {
   // Syltek requires a GET to the page first (establishes session context),
   // then a POST with advanced search filters to get the data.
-  // The date filter uses StartDate >= startDate (comparer 6).
+  // Filter 0: StartDate >= startDate (comparer 6)
+  // Filter 1: StartDate <= endDate   (comparer 7)
 
   // Step 1: GET the page (session setup / CSRF)
   await syltekFetch(clubId, '/reporting/occupancybyday');
@@ -412,10 +413,14 @@ export async function fetchOccupancyByDayAndType(
     'Sunday': 'on',
   };
   if (startDate) {
-    formFields['Reservations_search_property_0'] = 'StartDate';
-    formFields['Reservations_search_logic_0'] = 'and';
-    formFields['Reservations_search_comparer_0'] = '6'; // >=
-    formFields['Reservations_search_value_0'] = startDate;
+    formFields['Reservations_searchProperty_0'] = 'StartDate';
+    formFields['Reservations_searchComparer_0'] = '6'; // >= (greater than or equal)
+    formFields['Reservations_searchValue_0'] = startDate;
+  }
+  if (endDate) {
+    formFields['Reservations_searchProperty_1'] = 'StartDate';
+    formFields['Reservations_searchComparer_1'] = '7'; // <= (less than or equal)
+    formFields['Reservations_searchValue_1'] = endDate;
   }
 
   const html = await syltekFetch(

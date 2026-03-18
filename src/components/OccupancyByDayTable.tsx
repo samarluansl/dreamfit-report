@@ -6,6 +6,11 @@ interface OccupancyByDayTableProps {
 
 const DAY_LABELS = ['Lun', 'Mar', 'Mie', 'Jue', 'Vie', 'Sab', 'Dom'];
 
+function fmtHours(n: number): string {
+  if (Number.isInteger(n)) return `${n}`;
+  return n.toFixed(2).replace('.', ',');
+}
+
 export default function OccupancyByDayTable({ data }: OccupancyByDayTableProps) {
   const dayTotals = DAY_LABELS.map((_, i) =>
     data.reduce((sum, row) => sum + (row.days[i] ?? 0), 0)
@@ -39,13 +44,13 @@ export default function OccupancyByDayTable({ data }: OccupancyByDayTableProps) 
               </td>
               {row.days.map((val, i) => (
                 <td key={i} className="text-right tabular-nums text-gray-600">
-                  {val > 0 ? val.toLocaleString('es-ES') : (
+                  {val > 0 ? fmtHours(val) : (
                     <span className="text-gray-300">—</span>
                   )}
                 </td>
               ))}
               <td className="text-right tabular-nums font-semibold text-gray-800">
-                {row.total.toLocaleString('es-ES')}
+                {fmtHours(row.total)}
               </td>
             </tr>
           ))}
@@ -55,11 +60,11 @@ export default function OccupancyByDayTable({ data }: OccupancyByDayTableProps) 
             <td>Total</td>
             {dayTotals.map((val, i) => (
               <td key={i} className="text-right tabular-nums">
-                {val.toLocaleString('es-ES')}
+                {fmtHours(val)}
               </td>
             ))}
             <td className="text-right tabular-nums">
-              {grandTotal.toLocaleString('es-ES')}
+              {fmtHours(grandTotal)}
             </td>
           </tr>
         </tfoot>

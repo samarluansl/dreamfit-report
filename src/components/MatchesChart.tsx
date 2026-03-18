@@ -34,11 +34,15 @@ function CustomTooltip({
   label?: string;
 }) {
   if (!active || !payload?.length) return null;
-  const total = payload.reduce((s, p) => s + p.value, 0);
+  // Total = only Valle + Punta (not "Año anterior")
+  const total = payload
+    .filter((p) => p.name !== 'Año anterior')
+    .reduce((s, p) => s + p.value, 0);
+  const prevYear = payload.find((p) => p.name === 'Año anterior');
   return (
     <div className="bg-white border border-gray-200 rounded-lg shadow-lg px-3 py-2 text-sm">
       <p className="text-gray-500 mb-1 font-medium">{label}</p>
-      {payload.map((p) => (
+      {payload.filter((p) => p.name !== 'Año anterior').map((p) => (
         <div key={p.name} className="flex items-center gap-2">
           <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: p.color }} />
           <span className="text-gray-600">{p.name}:</span>
@@ -48,6 +52,13 @@ function CustomTooltip({
       <div className="border-t border-gray-100 mt-1 pt-1 font-semibold text-gray-900">
         Total: {total}
       </div>
+      {prevYear && prevYear.value > 0 && (
+        <div className="flex items-center gap-2 mt-1 pt-1 border-t border-gray-100">
+          <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: prevYear.color }} />
+          <span className="text-gray-500">Año anterior:</span>
+          <span className="font-semibold text-gray-600">{prevYear.value}</span>
+        </div>
+      )}
     </div>
   );
 }
